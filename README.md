@@ -1,4 +1,4 @@
-# SpoonMJ
+# Spoon BOT 
 A Script based on Javascript Language for Bot [Spoon](https://spooncast.net)
 
 This Tools required Authentication ID to Join, and o action
