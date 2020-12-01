@@ -1,10 +1,13 @@
 # Spoon BOT 
 A Script based on Javascript Language for Bot [Spoon](https://spooncast.net)
 
-This Tools required Authentication ID to Join, and o action
+This Tools required Authentication ID or Bearer ID to response the command.
+
+
+### ScreenShoots - LATEST Version
+![Spoon Bot ScreenShoot 1](https://raw.githubusercontent.com/princerayz/SpoonBOT/main/ScreenShoot1.jpg)
 
 ## Installation
-
 Download Repository [SpoonTools](https://github.com/princerayz/SpoonMJ.git) And Open With Any IDE Editor.
 
 ## Requirements
