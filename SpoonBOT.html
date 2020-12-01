@@ -1,0 +1,633 @@
+  <!DOCTYPE html>
+  <meta charset="utf-8" />
+  <title>Spoon BOTManajer</title>
+  <script language="javascript" type="text/javascript">
+	var LIVEID = "8541074"; //PUT Live ID Room Here
+	var wsUri = "wss://id-heimdallr.spooncast.net/"+LIVEID; //id for Indonesia Server
+	var userBOTID = 213914844; // Put your User Spoon ID BOT Here
+	var BearerID = "Bearer Sample"; // Put your BOT Bearer / Auth ID Here
+	var SpoonAppVersion = "5.8.11"; // Put API Version here
+	var userAgent = "Web"; //Put API User Agent Here
+	var listLagu = [];
+	var isAuthor = 0;
+	var debugMode = false; // to display all income / outcome WINSOCK
+	var enWelcomeMessage = true;
+	var enLeaveMessage = true;
+	var enAuReply = true;
+	var isOpenReq = true;
+	var isTapLop = true;
+	var LimitLagu = 10; //Limit List Request
+	var maxSpamHelp = 1; //Limit PerUSER to Show /help
+	var maxSpamList = 5; //Limit PerUSER to Show /list
+	var maxSpamStatus = 5; //Limit PerUSER to Show /status
+	var isListBot = ['mjrinz','mjrinzv2']; //put your list BOT User Tag Here
+	var isManager = []; //Leave it [], initial array for MJ List
+	var isblacklist = ["administrator","tablo21","jln1onl3","kom7or13","y3k11rjv","nr514030"]; //blacklist user to command BOT
+	var blacksong =	['kangen band', '3k','ily 3k','ily3k','i love you 3000', '3000']; //blacklist request list
+	var isSuperUser = ['BotRinz']; //SuperUser to Control the BOT
+	var isJoinToRoom = []; //Leave it [], initial array for User List
+	var setinitial = false;
+	var LDate = "2019-07-16T14:27:00.000000Z";
+	var livedate = '';
+	var isNextDate = '';
+	var roomID = '0';
+	var UserSpam = []; //help
+	var UserSpam2 = []; //list
+	var UserSpam3 = []; //status
+	var blackbot = ['fatih','division','Love You So Much', 'thankyou', 'KILLS', 'bot','andai saja']; //Blacklist Nick from BOT to response taplove
+	var AutoResponsePing = false;
+	var TimerPing = 9000; //Interval of timer between server response
+	var helpmsg = [] //Leave it [], initial array for List Help Command
+	helpmsg.push('-------[✾ Rinz By PrinceRay V1.4]-------'+ String.raw`\\n`+'Help Menu - [Command][syntax] | Information');
+	helpmsg.push('(Public)'+ String.raw`\\n`+'[/add] [Penyanyi - JudulLagu] | To Request Music'+ String.raw`\\n`+'[/list] | To Show Request List');
+	helpmsg.push('[/status] | To Display Room Status'+ String.raw`\\n`+'[/help] | To Display This Menu'+ String.raw`\\n`+'Sample : /add Eminem -  RapGod');
+	
+
+  function init()
+  {
+    output = document.getElementById("output");
+    myPleasure();
+  }
+
+  function myPleasure()
+  {
+    BotRinz = new WebSocket(wsUri);
+    BotRinz.onopen = function(evt) { onOpen(evt) };
+    BotRinz.onclose = function(evt) { onClose(evt) };
+    BotRinz.onmessage = function(evt) { onMessage(evt) };
+    BotRinz.onerror = function(evt) { onError(evt) };
+  }
+
+  function onOpen(evt)
+  {
+    writeToScreen("CONNECTED");
+	doSend('{"live_id":"'+LIVEID+'","appversion":"'+SpoonAppVersion+'","user_id":'+userBOTID+',"event":"live_state","type":"live_req","useragent":"'+userAgent+'"}');	 //live_shadowjoin
+  }
+
+  function onClose(evt)
+  {
+    writeToScreen("DISCONNECTED");
+  }
+
+  function addZero(i) {
+    if (i < 10) i = "0" + i;
+    return i;
+  }
+function escapeRegExp(string){
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function replaceAll(str, term, replacement) {
+  return str.replace(new RegExp(escapeRegExp(term), 'g'), replacement);
+}
+
+function filterInput(input, words) {
+ return words.some(word => input.toLowerCase().includes(word.toLowerCase()));
+}
+
+  function getIndexOfMArr(str,loc,obj){
+	for (var i = 0;i<obj.length;i++){
+    	if(obj[i][loc]== str){
+            return i;
+        }
+    }
+    return -1;
+}
+  function AntiSPAM(userID,objArr,max){ //HELP
+  	var b = getIndexOfMArr(userID,0,objArr);
+    if(b!=-1){
+        if(objArr[b][1] < max){
+      	   	objArr[b][1] +=1;
+            return 1;
+        }
+        else
+        	return -1;
+    }else{
+    	objArr.push([userID,1]);
+        return 2;
+    }
+  }
+
+  function getLTime(datein){
+	var ret = "";
+    var hours = Math.floor((datein % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    var minutes = Math.floor((datein % (1000 * 60 * 60)) / (1000 * 60));
+    var seconds = Math.floor((datein % (1000 * 60)) / 1000);
+    if(hours > 0 || hours < 0) ret+=Math.abs(hours) + " Hour(s) ";
+    if(minutes > 0 || minutes <0) ret+=Math.abs(minutes)+ " Minute(s) ";
+    if(seconds > 0 || seconds <0) ret+=Math.abs(seconds)+ " Second(s)";    
+    ret.replace("-","");
+	return ret;
+  }
+
+  function LiveTime(){
+  	var msg = "";
+	var curdate = (new Date);
+	var bebek = curdate - livedate ;// < 72e5;  
+	var isEndLive = isNextDate - curdate;
+	var isMyTime = new Date(LDate);
+	var time = addZero(isMyTime.getHours()) + ":" + addZero(isMyTime.getMinutes()) + ":" + addZero(isMyTime.getSeconds());
+	//msg+='ROOM ID : ' + roomID + String.raw`\\n` +'LIVE START AT : ' + time +' GMT+7' + String.raw`\\n` +'LIVE TIME : ' + getLTime(bebek)+ String.raw`\\n` + 'LIVE END IN : '+ getLTime(isEndLive);	
+	msg+='LIVE TIME : ' + getLTime(bebek)+ String.raw`\\n` + 'LIVE END IN : '+ getLTime(isEndLive);	
+	//msg+='LIVE END IN : '+ getLTime(isEndLive);
+	return msg;
+  }
+  
+  
+  function TextLimitSender(objArr)
+  {
+	var brembo = []
+	var i =0;
+	var textcounter = '';
+	var isNotPushYet = false;
+	for (i=0;i<objArr.length;i++){
+		var temptext = (i+1) + ". " + objArr[i]+ String.raw`\\n`;
+		if((textcounter.length) + (temptext.length) <= 100){
+			textcounter += temptext;
+			isNotPushYet = true;
+		}
+		else{
+			brembo.push(textcounter.substr(0,textcounter.length-3))
+			textcounter = temptext
+			isNotPushYet = false;
+		}
+		if(i == objArr.length -1 ){
+			if(isNotPushYet)
+				brembo.push(textcounter.substr(0,textcounter.length-3));
+		}
+	}
+	for(i=0;i<brembo.length;i++){
+		doSendMyMessage(brembo[i]);
+	}
+  }
+  
+  
+  String.prototype.format = function() {
+	return [...arguments].reduce((p,c) => p.replace(/%s/,c), this);
+	};
+	
+  function LikeDiscordWM(nick){
+	var messages = ["%s just joined. Hide your bananas.", "%s just slid into the room.", "Big %s showed up!", "Where’s %s? In the room!", "%s hopped into the room. Kangaroo!!","Welcome %s. Leave your weapons by the door.","%s joined. You must construct additional pylons.","%s joined your party.","%s just joined. Can I get a heal?","Welcome %s, Keep Calm, and listen.","A %s has spawned in the room.","A wild %s appeared.","%s just joined. Everyone, look busy!","%s is here to kick butt and chew bubblegum, And is all out of gum.","Brace yourselves. %s just joined the room.","Challenger approaching - %s has appeared!","Cheers, love! %s is here!","%s just joined the room - glhf!","Ermagherd. %s is here.","%s just joined the room - glhf!","Hey! Listen! %s has joined!","It's %s! Praise the sun! \\[T]/","%s just arrived. Seems OP - please nerf.","Never gonna give %s up, and Never gonna let him down.","Ready player %s","%s just showed up. Hold my beer.","Roses are red, violets are blue, %s joined this room with you","Swoooosh. %s just landed.","We've been expecting you %s","Welcome, %s. Stay awhile and listen.","Welcome, %s. We hope you brought pizza.","Welcome, %s. We were expecting you ( ͡° ͜ʖ ͡°)","%s has joined the room! It's super effective!","%s has joined the battle bus."];
+	var RandomWord = messages[Math.floor(Math.random() * messages.length)];
+	var ItsToSend = '%s'.format(RandomWord, nick);
+	doSendMyMessage(ItsToSend);
+  }
+
+  function onMessage(evt)
+  {
+  	if(debugMode){
+    	writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>');
+    }
+	var MSGIncome = JSON.parse(evt.data);	
+	
+	if(MSGIncome.event == "live_state" ){
+		doSend('{"live_id":"'+LIVEID+'","appversion":"'+SpoonAppVersion+'","retry":0,"reconnect":false,"token":"'+BearerID+'","event":"live_join","type":"live_req","useragent":"'+userAgent+'"}');	 //live_shadowjoin		
+		
+		if(MSGIncome.close_status == 1){
+				writeToScreen("LIVE IS ENDED");
+				BotRinz.close();
+		}
+	}
+	if(MSGIncome.event == "live_health" && MSGIncome.type == "live_req" ){
+		doSend('{"live_id":"'+LIVEID+'","appversion":"'+SpoonAppVersion+'","token":"'+BearerID+'","event":"live_health","type":"live_rpt","useragent":"'+userAgent+'"}');
+	}
+	
+	if(MSGIncome.event == "live_rpt" ){
+		if(setinitial == false){
+			isAuthor = MSGIncome.data.live.author.id;
+			isManager = MSGIncome.data.live.manager_ids;
+			LDate = MSGIncome.data.live.created;
+			livedate = new Date(LDate);
+			isNextDate = (new Date(new Date(LDate).setHours(new Date(LDate).getHours()+2)));
+			roomID = MSGIncome.rooms;
+			writeToScreen("DJ / Author Name : <b>" + MSGIncome.data.live.author.nickname + " ["+isAuthor+"] (@"+MSGIncome.data.live.author.tag+")"+"</b>");
+			setinitial = true;
+		
+			if(MSGIncome.data.live.close_status == 1){
+				writeToScreen("LIVE IS ENDED");
+				BotRinz.close();
+			}
+		}
+	}
+	if(MSGIncome.event == "live_join"){
+		if(setinitial){
+			if(isListBot.includes(MSGIncome.data.author.tag)){
+				doSendMyMessage("ONE OF THE FASTEST MJ IN RADIO SPOON [" + MSGIncome.data.author.nickname + "] IS BACK 😱😱👽");
+			}
+			else if(isSuperUser.includes(MSGIncome.data.author.tag)){
+				doSendMyMessage("ALL HAIL [" + MSGIncome.data.author.nickname + "] MY LORD 👑👑");
+			}else{
+				if(enWelcomeMessage && !isblacklist.includes(MSGIncome.data.author.tag)){
+					if(!isblacklist.includes(MSGIncome.data.author.tag)){
+						if (!filterInput(MSGIncome.data.author.nickname,blackbot)){
+							if(!isJoinToRoom.includes(MSGIncome.data.author.id)){				
+								//doSend('{"message":'+'"Welcome ' + MSGIncome.data.author.nickname + ' 😙", "event":"live_message"}');
+								LikeDiscordWM(MSGIncome.data.author.nickname);
+							}else{
+								doSendMyMessage("Welcome Back "+ MSGIncome.data.author.nickname + " 😉");
+							}
+						}
+					}
+				}
+			}
+
+			if(!isJoinToRoom.includes(MSGIncome.data.author.id)){
+				isJoinToRoom.push(MSGIncome.data.author.id);
+			}	
+		}			
+	}
+	else if(MSGIncome.event == "live_shadowjoin"){
+		if(!isJoinToRoom.includes(MSGIncome.data.author.id)){
+			isJoinToRoom.push(MSGIncome.data.author.id);
+		}
+		doSendMyMessage("Welcome " + MSGIncome.data.author.nickname + " [NGE-GHOST] 👻");
+	}
+	else if (MSGIncome.event == "live_leave" && enLeaveMessage){
+		doSendMyMessage(MSGIncome.data.author.nickname + " Just Leave ~");
+	}
+	else if (MSGIncome.event == "live_like"){
+		if(isSuperUser.includes(MSGIncome.data.author.tag)){
+			doSendMyMessage("THANKS ["+ MSGIncome.data.author.nickname + "] MY LORD 👑👑 For Your Tap Love ❤️❤️❤️❤️❤️❤️");
+		}else{
+			if(isTapLop){	
+				if (!filterInput(MSGIncome.data.author.nickname,blackbot))
+				doSendMyMessage("Thanks "+ MSGIncome.data.author.nickname + " For The Tap Love ❤️");
+			}	
+		}
+	}else if (MSGIncome.event == "live_present"){
+		var hadiah = "iniHadiah";
+		var msgcombo = "";//😍😍😍😍
+		if(MSGIncome.data.sticker == "sticker_arabictea"){hadiah = "Tea,🍷";}
+		else if(MSGIncome.data.sticker == "sticker_shawarma"){hadiah = "Bread,🥙";}
+		else if(MSGIncome.data.sticker == "sticker_coffee_dates"){hadiah = "Coffee,☕";}
+		else if(MSGIncome.data.sticker == "sticker_lamp"){hadiah = "Lamp,🪔";}
+		else if(MSGIncome.data.sticker == "sticker_brandbag"){hadiah = "Branded Bag,👜";}
+		else if(MSGIncome.data.sticker == "sticker_watch"){hadiah = "Watch,⌚";}
+		else if(MSGIncome.data.sticker == "sticker_diamond"){hadiah = "Diamond,💎";}
+		else if(MSGIncome.data.sticker == "sticker_sportscar"){hadiah = "Sports Car,🏎️";}
+		else if(MSGIncome.data.sticker == "sticker_castle"){hadiah = "Castle,🏰";}
+		else if(MSGIncome.data.sticker == "sticker_cendol"){hadiah = "Cendol,🍹";}
+		else if(MSGIncome.data.sticker == "sticker_tea_bottle"){hadiah = "Tea,🥤";}
+		else if(MSGIncome.data.sticker == "sticker_text_fighting"){hadiah = "Cheers,🥂";}
+		else if(MSGIncome.data.sticker == "sticker_ramen"){hadiah = "Ramen,🍜";}
+		else if(MSGIncome.data.sticker == "sticker_text_like"){hadiah = "Love,💕";}
+		else if(MSGIncome.data.sticker == "sticker_champagne_tower"){hadiah = "Champagne,🍾🥂";}
+		else if(MSGIncome.data.sticker == "sticker_snack11"){hadiah = "Snack,🥨";}
+		else if(MSGIncome.data.sticker == "sticker_rollcake"){hadiah = "RollCake,🥮";}
+		else if(MSGIncome.data.sticker == "sticker_lip"){hadiah = "Lips,👄";}
+		else if(MSGIncome.data.sticker == "sticker_chicken"){hadiah = "KFC Chicken,🍗";}
+		else if(MSGIncome.data.sticker == "sticker_crown"){hadiah = "Crown,👑";}
+		else if(MSGIncome.data.sticker == "sticker_vday"){hadiah = "Valentine Cake,💝";}
+		else if(MSGIncome.data.sticker == "sticker_clover"){hadiah = "Clover,🍀";}
+		else if(MSGIncome.data.sticker == "sticker_ohohoh"){hadiah = "OHHH,😱";}
+		else if(MSGIncome.data.sticker == "sticker_jackpot"){hadiah = "Jackpot,🎰";}
+		else if(MSGIncome.data.sticker == "sticker_angel"){hadiah = "Angel,👼🏻";}
+		else if(MSGIncome.data.sticker == "sticker_santa"){hadiah = "Santa,🎅🏻";}
+		else if(MSGIncome.data.sticker == "sticker_like"){hadiah = "Like,😍😍😍😍😍😍😍😍😍😍";}
+		else if(MSGIncome.data.sticker == "sticker_juice"){hadiah = "Juice,🍷";}
+		else if(MSGIncome.data.sticker == "sticker_icecream"){hadiah = "Ice Cream,🍦";}
+		else if(MSGIncome.data.sticker == "sticker_coke"){hadiah = "Coke,🍾";}
+		else if(MSGIncome.data.sticker == "sticker_rose"){hadiah = "Rose 10,🌹";}
+		else if(MSGIncome.data.sticker == "sticker_id_rose"){hadiah = "Rose 2,🌹";}
+		else if(MSGIncome.data.sticker == "sticker_hotdog"){hadiah = "Hotdog,🌭";}
+		else if(MSGIncome.data.sticker == "sticker_fried_rice"){hadiah = "Fried Rice,🍱";}
+		else if(MSGIncome.data.sticker == "sticker_coffee_donut"){hadiah = "Coffe & Donut,☕🍩";}
+		else if(MSGIncome.data.sticker == "sticker_sneakers"){hadiah = "Sneakers,👟";}
+		else if(MSGIncome.data.sticker == "sticker_pizza"){hadiah = "Pizza,🍕";}
+		else if(MSGIncome.data.sticker == "sticker_bearflower"){hadiah = "Bear Flower,🧸💐";}
+		else if(MSGIncome.data.sticker == "sticker_king"){hadiah = "King Crown,👑";}
+		else if(MSGIncome.data.sticker == "sticker_scooter"){hadiah = "Scooter,🛵";}
+		else if(MSGIncome.data.sticker == "sticker_bali_trip"){hadiah = "Island,🏝️";}
+		else if(MSGIncome.data.sticker == "sticker_airplane"){hadiah = "Airplane,✈️✈️✈️✈️✈️";}
+		else if(MSGIncome.data.sticker == "sticker_myheart"){hadiah = "Present,🎁";}
+
+		var splitted = hadiah.split(",");
+		for (var xc = 0; xc < parseInt(MSGIncome.data.combo); xc++){msgcombo+=splitted[1];}
+		doSendMyMessage("Thanks "+ MSGIncome.data.author.nickname + " For The "+ splitted[0] +" Gift "+ msgcombo);
+	}else if(MSGIncome.event =="live_update"){
+		if(MSGIncome.data.live.close_status == 1){
+			writeToScreen("LIVE IS ENDED");
+			doSend('{"event":"live_leave"}');
+			BotRinz.close();
+		}
+		else{
+			isManager = MSGIncome.data.live.manager_ids;
+		}
+	}
+	else if (MSGIncome.event == "live_message"){
+		var isHaveAuthority = (MSGIncome.data.author.id == isAuthor || isSuperUser.includes(MSGIncome.data.author.tag));
+		if(!isblacklist.includes(MSGIncome.data.author.tag)){
+			var msg = MSGIncome.data.message;
+			if(msg.substr(0,5).toLowerCase() == "/help" || msg.substr(0,2).toLowerCase() == "/?"){
+				var tmpmsg = helpmsg;
+				if(isManager.includes(MSGIncome.data.author.id) || MSGIncome.data.author.id == isAuthor || isHaveAuthority){
+					tmpmsg.push('(DJ / MJ Only)'+ String.raw`\\n`+'[/remove] [Number] | To Remove Request From List');
+					tmpmsg.push('[/clear] | To Remove All Requested List'+ String.raw`\\n`+'[/blocklist] | To Show All Ignored User From BOT');
+					tmpmsg.push('[/ignore] [UserTag] | To Add Ignored User From BOT Command (without @)');
+					tmpmsg.push('[/unignore] [Number] | To Remove Ignored User List');
+					tmpmsg.push('[/on|/off] [add] | To Open / Close Request'+ String.raw`\\n`+'[/on|/off] [welcome] | To ON or OFF Welcome Message');
+					tmpmsg.push('[/on|/off] [leave] | To ON or OFF Leave Message');
+					tmpmsg.push('[/refresh] | To Clear AntiSPAM ([Help,'+maxSpamHelp+'][List,'+maxSpamList+'][Status,'+maxSpamStatus+'])');
+				}
+				if(isHaveAuthority){					
+					tmpmsg.push('(DJ Only)'+ String.raw`\\n`+'[/on|/off] [reply] | To ON or OFF Auto Reply');
+				}
+				tmpmsg.push('Copyright © 2019 ~ Now - PrinceRay'+ String.raw`\\n`+'LINE : princerayz'+ String.raw`\\n`+'IG : @hvn_princeray');
+				if(AntiSPAM(MSGIncome.data.author.id,UserSpam,maxSpamHelp)!=-1 || isHaveAuthority){
+					for(var j=0;j<tmpmsg.length;j++)
+						doSendMyMessage(tmpmsg[j]);
+				}
+			}
+			else if(msg.substr(0,7).toLowerCase() == "/status"){
+				if(AntiSPAM(MSGIncome.data.author.id,UserSpam3,maxSpamStatus)!=-1 || isHaveAuthority || isManager.includes(MSGIncome.data.author.id))
+					doSendMyMessage(LiveTime());
+			}
+			else if(msg.substr(0,6).toLowerCase() == "/leave"){
+				if(isSuperUser.includes(MSGIncome.data.author.tag)){	
+					var msgspam = "Ok, Im leaving now :(, Good Bye ~";
+					for (var be = 0; be<21; be++){
+						msgspam+= String.raw`\\n`;
+					}
+					doSendMyMessage(msgspam);
+					doSendMyMessage("Tapi Bohong 😝😝😝😝😝😝");
+				}
+			}
+			else if(msg.substr(0,4).toLowerCase() == "/add"){
+				if(isOpenReq || isHaveAuthority || (isManager.includes(MSGIncome.data.author.id))){
+					var judul = msg.substr(5,msg.length);
+					judul = replaceAll(judul,"\"","");
+					if(judul!=" "){
+						if(listLagu.length <= LimitLagu){
+							if(!filterInput(judul,blacksong) || isHaveAuthority){					
+								listLagu.push(judul);// + ' [' + (MSGIncome.data.author.nickname).replace('\"','') +']');				
+								doSendMyMessage("Request : " + judul + String.raw`\\n`+"Has Been Added To List !");
+							}else{
+								doSendMyMessage("Request : " + judul + String.raw`\\n`+"Rejected, The Request is Blacklisted!");
+							}
+						}else{
+							doSendMyMessage("Request : " + judul + String.raw`\\n`+"Rejected, List is Full!");
+						}
+					}
+				}
+				else{
+					doSendMyMessage("Sorry We are Currently Close Request");
+				}
+			}
+			else if(msg.substr(0,5).toLowerCase() == "/list"){	
+				if(AntiSPAM(MSGIncome.data.author.id,UserSpam2,maxSpamList)!=-1  || isHaveAuthority || isManager.includes(MSGIncome.data.author.id)){
+					var i =0;
+					//var mymsg = "Request List : "+ String.raw`\\n`;
+					var msgpart = '';
+					var mymsg = "💿 ●━━━━━━━━━━━━━━ ["+listLagu.length+"] 🎶"+ String.raw`\\n` + "ㅤㅤ⇆ㅤㅤㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤㅤㅤ↻";
+					if(listLagu.length > 0){
+						doSendMyMessage(mymsg);
+						TextLimitSender(listLagu);
+						/*
+						for (i=0;i<listLagu.length;i++){
+							msgpart+= (i+1) + ". " + listLagu[i]+ String.raw`\\n`;
+						}
+						var sendme = [];
+						while(msgpart.length){
+							sendme.push(msgpart.substr(0,100));
+							msgpart = msgpart.substr(100);
+							//
+						}
+						for(i=0;i<sendme.length;i++){
+							doSend('{"message":"' + sendme[i] +'","appversion":"'+SpoonAppVersion+'","useragent":"'+userAgent+'","token":"'+BearerID+'","event":"live_message","type":"live_rpt"}');
+						}*/
+					}
+					else{	
+						doSendMyMessage("List is Empty");
+					}
+				}else{
+					doSendMyMessage(MSGIncome.data.author.nickname+" : You Have Reached Limit To Check List (Max "+maxSpamList+")");
+				}
+			}
+			/****** AUTHORITY SYSTEM START HERE******/		
+			if(isHaveAuthority || (isManager.includes(MSGIncome.data.author.id)) || isListBot.includes(MSGIncome.data.author.id)){
+				if(msg.substr(0,7).toLowerCase() == "/remove"){
+						var judul = msg.substr(8,msg.length);
+						if(listLagu.length ==0 ){
+							doSendMyMessage("Remove Command : Failure, List is Empty");
+						}
+						else if( ((parseInt(judul)) > listLagu.length) || (parseInt(judul) <= 0)){
+							doSendMyMessage("Remove Command : Failure, Wrong Input");
+						}
+						else{
+							var tempjudul = listLagu[parseInt(judul)-1];
+							listLagu.splice(parseInt(judul)-1,1);
+							UserSpam2 = [];
+							doSendMyMessage("Remove : " + tempjudul  + String.raw`\\n`+"Has Been Removed From List !");
+						}
+				}
+
+				/* ---------- IGNORE LIST START ---------*/
+				else if(msg.substr(0,7).toLowerCase() == "/ignore"){
+					var judul = msg.substr(8,msg.length);
+					judul = judul.replace("@","");
+					if(!isSuperUser.includes(judul) && !isListBot.includes(judul)){
+						if(!isblacklist.includes(judul)){
+							isblacklist.push(judul);						
+							doSendMyMessage("Ignore : Success," + judul + String.raw`\\n`+"Has Been Added To List !");
+						}
+						else{
+							doSendMyMessage("Ignore : Failure, " + judul + String.raw`\\n`+"Already Ignored !");
+						}						
+					}else{
+						doSendMyMessage("Sorry ("+ MSGIncome.data.author.nickname +"), We Can not block that user");
+					}
+				}
+				else if(msg.substr(0,11).toLowerCase() == "/blocklist"){
+					var i =0;
+					var mymsg = String.raw`\\n`;
+					if(isblacklist.length > 0){
+						/*for (i=0;i<isblacklist.length;i++){
+							mymsg += (i+1) + ". " + isblacklist[i] + String.raw`\\n` ;
+						}
+						doSendMyMessage("Ignore List : " + mymsg);
+						*/						
+						TextLimitSender(isblacklist);
+					}
+					else{			
+						doSendMyMessage("Blocklist is Empty");
+					}
+				}
+				else if(msg.substr(0,9).toLowerCase() == "/unignore"){	
+						var judul = msg.substr(10,msg.length);
+						if(isblacklist.length ==0 ){
+							doSendMyMessage("UnIgnore Command : Failure, No Ignored user In List");
+						}
+						else {
+							if( ((parseInt(judul)) > isblacklist.length) || (parseInt(judul) <= 0)){
+								doSendMyMessage("UnIgnore Command : Failure, Wrong Input");
+							}else{								
+								var tempjudul = isblacklist[parseInt(judul)-1];
+								isblacklist.splice(parseInt(judul)-1,1);
+								doSendMyMessage("UnIgnore : " + tempjudul  + String.raw`\\n`+"Has Been Removed From List !");
+							}
+						}
+				}
+				/* ---------- IGNORE LIST END -----------*/
+				else if(msg.substr(0,6).toLowerCase() == "/clear"){	
+					if(listLagu.length ==0 ){
+						doSendMyMessage("Clear Command : Failure, List is Empty");
+					}
+					else{
+						listLagu = [];
+						doSendMyMessage("Clear Command : Success, List has Been Cleared");
+					}
+				}
+				else if(msg.substr(0,8).toLowerCase() == "/refresh"){
+					UserSpam = [];
+					UserSpam2 =[];
+					UserSpam3 =[];
+					doSendMyMessage("Refresh Command : Success, AntiSPAM Cleared");
+				}
+				/*	--------------------- command enable MESSAGE DJ --------------------------*/
+				else if(msg.substr(0,7).toLowerCase() == "/on add"){	
+					if(isOpenReq == true ){
+						doSendMyMessage("ENABLE Command [Open Request] : Failure, Open Request Message Already Enabled !");
+					}
+					else{
+						isOpenReq = true;
+						doSendMyMessage("ENABLE Command [Open Request] : Success, Open Request Message Now Enabled");
+					}
+				}
+				else if(msg.substr(0,8).toLowerCase() == "/off add"){		
+					if(isOpenReq == false ){
+						doSendMyMessage("DISABLE Command [Open Request] : Failure, Open Request Message Already Disabled !");
+					}
+					else{
+						isOpenReq = false;
+						doSendMyMessage("DISABLE Command [Open Request] : Success, Open Request Message Now Disabled");
+					}
+				}			
+				else if(msg.substr(0,11).toLowerCase() == "/on welcome"){
+					if(enWelcomeMessage == true ){
+						doSendMyMessage("ENABLE Command [welcome] : Failure, Welcome Message Already Enabled !");
+					}
+					else{
+						enWelcomeMessage = true;
+						doSendMyMessage("ENABLE Command [welcome] : Success, Welcome Message Now Enabled");
+					}
+				}
+				else if(msg.substr(0,12).toLowerCase() == "/off welcome"){
+					if(enWelcomeMessage == false ){
+						doSendMyMessage("DISABLE Command [welcome] : Failure, Welcome Message Already Disabled !");
+					}
+					else{
+						enWelcomeMessage = false;
+						doSendMyMessage("DISABLE Command [welcome] : Success, Welcome Message Now Disabled");
+					}
+				}
+				else if(msg.substr(0,9).toLowerCase() == "/on leave"){
+					if(enLeaveMessage == true ){
+						doSendMyMessage("ENABLE Command [leave] : Failure, Leave Message Already Enabled !");
+					}
+					else{
+						enLeaveMessage = true;
+						doSendMyMessage("ENABLE Command [leave] : Success, Leave Message Now Enabled");
+					}
+				}
+				else if(msg.substr(0,10).toLowerCase() == "/off leave"){
+					if(enLeaveMessage == false ){
+						doSendMyMessage("DISABLE Command [leave] : Failure, Leave Message Already Disabled !");
+					}
+					else{
+						enLeaveMessage = false;
+						doSendMyMessage("DISABLE Command [leave] : Success, Leave Message Now Disabled");
+					}
+				}
+				else if(msg.substr(0,9).toLowerCase() == "/on reply"){
+					if(isHaveAuthority){	
+						if(enAuReply == true ){
+							doSendMyMessage("ENABLE Command [Auto Reply] : Failure, Auto Reply Message Already Enabled !");
+						}
+						else{
+							enAuReply = true;
+							doSendMyMessage("ENABLE Command [Auto Reply] : Success, Auto Reply Message Now Enabled");
+						}
+					}/*else{
+						doSendMyMessage("ENABLE Command [Auto Reply] : Failure, You ("+ MSGIncome.data.author.nickname +") Dont Have Permission to do that");
+					}*/
+				}
+				else if(msg.substr(0,10).toLowerCase() == "/off reply"){
+					if(isHaveAuthority){	
+						if(enAuReply == false ){
+							doSendMyMessage("DISABLE Command [Auto Reply] : Failure, Auto Reply Message Already Disabled !");
+						}
+						else{
+							enAuReply = false;
+							doSendMyMessage("DISABLE Command [Auto Reply] : Success, Auto Reply Message Now Disabled");
+						}
+					}/*else{
+						doSendMyMessage("DISABLE Command [Auto Reply] : Failure, You ("+ MSGIncome.data.author.nickname +") Dont Have Permission to do that");
+					}*/
+				}			
+			}			
+			/*	--------------------- command MESSAGE --------------------------*/
+			if(enAuReply && (!isListBot.includes(MSGIncome.data.author.tag))){
+				if (msg.toLowerCase() == "apa lu"){
+				doSendMyMessage("LU YANG APA "+ MSGIncome.data.author.nickname + " !!! NANTANGIN LU ?");
+				}else if (msg.toLowerCase().includes("meyeng") ){
+					doSendMyMessage("Apa lu "+ MSGIncome.data.author.nickname + " meyeng²");
+				}else if (msg.toLowerCase().includes("love you")){
+					doSendMyMessage("Love You Too "+ MSGIncome.data.author.nickname + " 😘");
+				}else if (msg.toLowerCase() == "lawan banyak nih" || msg.toLowerCase() == "pasukan banyak nih"){
+					doSendMyMessage("GAK TAKUT GW, MAJU LU PADA SINI");
+				}else if (msg.toLowerCase() == "maju lu" || msg.toLowerCase() == "maju sini" || msg.toLowerCase() == "sini lu"){
+					doSendMyMessage("" + MSGIncome.data.author.nickname +" LU DULUAN MAJU SINI !!");
+				}else if (msg.toLowerCase() == "gw mundur"){
+					doSendMyMessage("YAH LEMAH LU " + MSGIncome.data.author.nickname +", GITU DOANG NYALI LU ?");
+				}else if ((msg.toLowerCase().includes("kick bot") || msg.toLowerCase().includes("gw kick lu"))){
+					doSendMyMessage("APAAN SIH "+ MSGIncome.data.author.nickname + " MAIN KICK² AJA, LEMAH BANGET NYALI LU");
+				}else if (msg.toLowerCase() == "cinder" || msg.toLowerCase() == "cinderella"){
+					doSendMyMessage("" + MSGIncome.data.author.nickname +" : •Cinderella࿐👑 si kampret yang suka ngajak ribut ?");
+				}else if (msg.toLowerCase() == "octa" || msg.toLowerCase() == "okta"){
+					doSendMyMessage("" + MSGIncome.data.author.nickname +" : Kakaknya •Cinderella࿐👑 yang ngaku2 tirus itu ?");
+				}else if (msg.toLowerCase().includes("betket")){
+					doSendMyMessage("" + MSGIncome.data.author.nickname +" : BETKET ?? SIAPA ITU ? GK KENAL AKU");
+				}else if (msg.toLowerCase() == "prince" || msg.toLowerCase() == "ray"){
+					doSendMyMessage("Oh.. Prince Ray itu tuh Master aku, yang udah ngelahirin aku ke dunia perSPOONan ini");
+				}
+			}
+		}		
+
+	}
+
+    //websocket.close();
+  }
+
+
+  function onError(evt)
+  {
+    writeToScreen('<span style="color: red;">ERROR:</span> ' + evt.data);
+  }
+
+  function doSend(message)
+  {
+    //writeToScreen("SENT: " + message);
+    BotRinz.send(message);
+  }
+
+  function doSendMyMessage(TheMessage){
+	doSend('{"message":"' + TheMessage +'","appversion":"'+SpoonAppVersion+'","useragent":"'+userAgent+'","token":"'+BearerID+'","event":"live_message","type":"live_rpt"}');
+  }
+
+  function writeToScreen(message)
+  {
+    var pre = document.createElement("p");
+    pre.style.wordWrap = "break-word";
+    pre.innerHTML = message;
+    output.appendChild(pre);
+  }
+
+  window.addEventListener("load", init, false);
+
+  </script>
+
+  <h2>SPOON BOT MANAJER</h2>
+
+  <div id="output"></div>
+          
+</html>
